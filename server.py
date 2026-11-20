@@ -30,19 +30,62 @@ os.chdir(ROOT)
 DB = ROOT / "marktradar.sqlite3"
 REFRESH_SECONDS = 300
 FULL_HISTORY_SECONDS = 6 * 3600
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MarktRadar/2.0"
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MarktRadar/2.1"
+
+# cat: us | eu | index | commodity | crypto ;  unit is shown after the price (e.g. per ounce)
+def _sym(name, exchange, color, mark, cat, cur="USD", unit=""):
+    return {"name": name, "exchange": exchange, "color": color, "mark": mark, "cat": cat, "currency": cur, "unit": unit}
+
 
 SYMBOLS = {
-    "NVDA": {"name": "NVIDIA", "exchange": "NASDAQ", "color": "#76b900", "mark": "N"},
-    "MSFT": {"name": "Microsoft", "exchange": "NASDAQ", "color": "#2478c3", "mark": "M"},
-    "AAPL": {"name": "Apple", "exchange": "NASDAQ", "color": "#273036", "mark": "A"},
-    "AMZN": {"name": "Amazon", "exchange": "NASDAQ", "color": "#f19a38", "mark": "a"},
-    "GOOGL": {"name": "Alphabet", "exchange": "NASDAQ", "color": "#4285f4", "mark": "G"},
-    "META": {"name": "Meta Platforms", "exchange": "NASDAQ", "color": "#0866ff", "mark": "M"},
-    "TSLA": {"name": "Tesla", "exchange": "NASDAQ", "color": "#e82127", "mark": "T"},
-    "AVGO": {"name": "Broadcom", "exchange": "NASDAQ", "color": "#c8323e", "mark": "B"},
-    "BRK-B": {"name": "Berkshire Hathaway", "exchange": "NYSE", "color": "#213c31", "mark": "B"},
-    "JPM": {"name": "JPMorgan Chase", "exchange": "NYSE", "color": "#6b4f34", "mark": "J"},
+    # US stocks
+    "NVDA": _sym("NVIDIA", "NASDAQ", "#76b900", "N", "us"),
+    "MSFT": _sym("Microsoft", "NASDAQ", "#2478c3", "M", "us"),
+    "AAPL": _sym("Apple", "NASDAQ", "#556068", "A", "us"),
+    "AMZN": _sym("Amazon", "NASDAQ", "#f19a38", "a", "us"),
+    "GOOGL": _sym("Alphabet (Google)", "NASDAQ", "#4285f4", "G", "us"),
+    "META": _sym("Meta (Facebook)", "NASDAQ", "#0866ff", "M", "us"),
+    "TSLA": _sym("Tesla", "NASDAQ", "#e82127", "T", "us"),
+    "AVGO": _sym("Broadcom", "NASDAQ", "#c8323e", "B", "us"),
+    "AMD": _sym("AMD", "NASDAQ", "#2c8a6e", "AMD", "us"),
+    "NFLX": _sym("Netflix", "NASDAQ", "#b20710", "N", "us"),
+    "PLTR": _sym("Palantir", "NASDAQ", "#3a3f44", "P", "us"),
+    "COST": _sym("Costco", "NASDAQ", "#005daa", "C", "us"),
+    "BRK-B": _sym("Berkshire Hathaway", "NYSE", "#2f5a48", "B", "us"),
+    "JPM": _sym("JPMorgan Chase", "NYSE", "#6b4f34", "J", "us"),
+    "V": _sym("Visa", "NYSE", "#1a1f71", "V", "us"),
+    "LLY": _sym("Eli Lilly", "NYSE", "#d52b1e", "L", "us"),
+    "WMT": _sym("Walmart", "NYSE", "#0071ce", "W", "us"),
+    "KO": _sym("Coca-Cola", "NYSE", "#e41e2b", "KO", "us"),
+    "XOM": _sym("ExxonMobil", "NYSE", "#ed1b2d", "X", "us"),
+    "DIS": _sym("Disney", "NYSE", "#113ccf", "D", "us"),
+    # Europe & Austria
+    "SAP.DE": _sym("SAP", "XETRA", "#0a6ed1", "SAP", "eu", "EUR"),
+    "SIE.DE": _sym("Siemens", "XETRA", "#009999", "S", "eu", "EUR"),
+    "ALV.DE": _sym("Allianz", "XETRA", "#003781", "A", "eu", "EUR"),
+    "MBG.DE": _sym("Mercedes-Benz", "XETRA", "#5f6b73", "M", "eu", "EUR"),
+    "ASML.AS": _sym("ASML", "Amsterdam", "#10069f", "AS", "eu", "EUR"),
+    "MC.PA": _sym("LVMH", "Paris", "#8a6d3b", "LV", "eu", "EUR"),
+    "OMV.VI": _sym("OMV", "Wien", "#0b3d91", "O", "eu", "EUR"),
+    "EBS.VI": _sym("Erste Group", "Wien", "#2870ed", "E", "eu", "EUR"),
+    "VOE.VI": _sym("voestalpine", "Wien", "#00508c", "V", "eu", "EUR"),
+    # Indices
+    "^GSPC": _sym("S&P 500", "USA", "#3d4b57", "500", "index", "USD", "Punkte"),
+    "^NDX": _sym("Nasdaq 100", "USA", "#3d4b57", "100", "index", "USD", "Punkte"),
+    "^GDAXI": _sym("DAX", "Deutschland", "#3d4b57", "DAX", "index", "EUR", "Punkte"),
+    "^ATX": _sym("ATX", "Österreich", "#3d4b57", "ATX", "index", "EUR", "Punkte"),
+    "^STOXX50E": _sym("Euro Stoxx 50", "Eurozone", "#3d4b57", "50", "index", "EUR", "Punkte"),
+    # Commodities (front-month futures)
+    "GC=F": _sym("Gold", "Rohstoff", "#c9a227", "Au", "commodity", "USD", "je Unze"),
+    "SI=F": _sym("Silber", "Rohstoff", "#9aa4ad", "Ag", "commodity", "USD", "je Unze"),
+    "BZ=F": _sym("Öl (Brent)", "Rohstoff", "#3b3b3b", "Öl", "commodity", "USD", "je Barrel"),
+    "CL=F": _sym("Öl (WTI)", "Rohstoff", "#4a4a4a", "WTI", "commodity", "USD", "je Barrel"),
+    "NG=F": _sym("Erdgas", "Rohstoff", "#3f7fbf", "Gas", "commodity", "USD", "je MMBtu"),
+    "HG=F": _sym("Kupfer", "Rohstoff", "#b87333", "Cu", "commodity", "USD", "je Pfund"),
+    # Crypto & currencies
+    "BTC-USD": _sym("Bitcoin", "Krypto", "#f7931a", "₿", "crypto"),
+    "ETH-USD": _sym("Ethereum", "Krypto", "#627eea", "Ξ", "crypto"),
+    "EURUSD=X": _sym("Euro in Dollar", "Devisen", "#1f4e9c", "€$", "crypto", "USD", "pro Euro"),
 }
 MARKET = ["SPY", "^VIX"]
 
@@ -344,14 +387,14 @@ def track_record() -> dict:
 
 
 def chart_series(daily: dict, intraday: dict | None) -> dict:
-    pts = lambda s, idx: [[s["t"][i], round(s["c"][i], 4)] for i in idx]
+    pts = lambda s, idx: [[s["t"][i], float(f"{s['c'][i]:.5g}")] for i in idx]
     n = len(daily["c"])
     out = {"1M": pts(daily, range(max(0, n - 22), n)), "1J": pts(daily, range(max(0, n - 252), n))}
-    out["MAX"] = pts(daily, sorted(set(range(0, n, 5)) | {n - 1}))
+    out["MAX"] = pts(daily, sorted(set(range(0, n, 10)) | {n - 1}))
     if intraday and intraday["c"]:
         last_day = intraday["day"][-1]
         out["1T"] = pts(intraday, [i for i, d in enumerate(intraday["day"]) if d == last_day])
-        out["1W"] = pts(intraday, range(len(intraday["c"])))
+        out["1W"] = pts(intraday, sorted(set(range(0, len(intraday["c"]), 2)) | {len(intraday["c"]) - 1}))
     else:
         out["1T"], out["1W"] = [], pts(daily, range(max(0, n - 5), n))
     return out
@@ -370,10 +413,9 @@ def build_stock(ticker: str, daily: dict, intraday: tuple[dict, dict] | None, ne
     rated = [n["score"] for n in news[:8]]
     year = daily["rc"][-252:]
     return {
-        "ticker": ticker, **meta_info, "price": round(price, 2), "prevClose": round(float(prev), 2), "change": round(change, 3),
-        "currency": imeta.get("currency", "USD"), "dayHigh": imeta.get("regularMarketDayHigh"), "dayLow": imeta.get("regularMarketDayLow"),
-        "yearHigh": round(max(year), 2), "yearLow": round(min(year), 2), "marketTime": imeta.get("regularMarketTime"),
-        "forecast": fc, "news": news[:6], "newsTone": round(sum(rated) / len(rated), 2) if rated else None,
+        "ticker": ticker, **meta_info, "price": round(price, 5 if price < 20 else 2), "prevClose": round(float(prev), 5 if price < 20 else 2), "change": round(change, 3), "dayHigh": imeta.get("regularMarketDayHigh"), "dayLow": imeta.get("regularMarketDayLow"),
+        "yearHigh": float(f"{max(year):.6g}"), "yearLow": float(f"{min(year):.6g}"), "marketTime": imeta.get("regularMarketTime"),
+        "forecast": fc, "news": news[:5], "newsTone": round(sum(rated) / len(rated), 2) if rated else None,
         "chart": chart_series(daily, iseries),
     }
 
@@ -383,7 +425,7 @@ def refresh() -> None:
     set_status(refreshing=True, last_attempt=now_iso(), message="Loading Yahoo Finance data…")
     tickers = list(SYMBOLS) + MARKET
     universe, errors = {}, {}
-    with ThreadPoolExecutor(max_workers=6) as pool:
+    with ThreadPoolExecutor(max_workers=8) as pool:
         daily_jobs = {t: pool.submit(load_daily, t) for t in tickers}
         intra_jobs = {t: pool.submit(yahoo_chart, t, "5d", "15m") for t in SYMBOLS}
         news_jobs = {t: pool.submit(fetch_news, t) for t in SYMBOLS}
@@ -537,7 +579,7 @@ def main() -> None:
 
 
 STATIC_FILES = ["index.html", "sw.js", "manifest.webmanifest", "icon.svg"]
-STATIC_REFRESH_SECONDS = 900  # GitHub Actions schedule during market hours
+STATIC_REFRESH_SECONDS = 600  # GitHub Actions schedule during market hours
 
 
 def build_static(out_dir: Path, state_dir: Path) -> None:

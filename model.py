@@ -26,7 +26,7 @@ from math import exp, log, sqrt, sumprod
 
 HORIZON = 5
 LOWER_Q, UPPER_Q = 0.10, 0.90  # 80% range
-MODEL_VERSION = "2.0"
+MODEL_VERSION = "2.1"
 FEATURE_NAMES = [
     "ret_1d", "ret_5d", "ret_20d", "ret_60d", "ret_120d", "ret_252d",
     "rel_spy_5d", "rel_spy_20d", "vol_ratio", "vol_level",
@@ -53,8 +53,24 @@ def _clean(x: float) -> float:
     return x if math.isfinite(x) else 0.0
 
 
+def positive(s: dict) -> dict:
+    """Copy of a price series where non-positive prices (e.g. WTI oil at -37 $ in April 2020)
+    are replaced by the last positive close, so log returns stay defined."""
+    out = {k: list(v) for k, v in s.items()}
+    last = next((x for x in s["c"] if x and x > 0), 1.0)
+    for i in range(len(out["c"])):
+        if not out["c"][i] or out["c"][i] <= 0:
+            out["c"][i] = last
+        last = out["c"][i]
+        for k in ("o", "h", "l"):
+            if k in out and (not out[k][i] or out[k][i] <= 0):
+                out[k][i] = out["c"][i]
+    return out
+
+
 def direction_features(s: dict, spy: dict[int, float], vix: dict[int, float]) -> list[list[float] | None]:
     """Feature vector for every bar (None during warm-up). `s` holds lists day/o/h/l/c/v."""
+    s = positive(s)
     days, c, hi, lo, op, vol = s["day"], s["c"], s["h"], s["l"], s["o"], s["v"]
     sc, vx = _ffill(days, spy), _ffill(days, vix)
     n = len(c)
@@ -98,6 +114,7 @@ def direction_features(s: dict, spy: dict[int, float], vix: dict[int, float]) ->
 
 def vol_features(s: dict, vix: dict[int, float]) -> list[list[float] | None]:
     """HAR-style log-volatility predictors for every bar."""
+    s = positive(s)
     days, c, hi, lo = s["day"], s["c"], s["h"], s["l"]
     vx = _ffill(days, vix)
     n = len(c)
@@ -201,6 +218,7 @@ def _datasets(universe: dict[str, dict], spy: dict[int, float], vix: dict[int, f
     """Rows: (day, ticker, direction_features, vol_features, future_log_return, future_realised_vol)."""
     rows = []
     for ticker, s in universe.items():
+        s = positive(s)
         c = s["c"]
         df, vf = direction_features(s, spy, vix), vol_features(s, vix)
         n = len(c)
@@ -360,6 +378,7 @@ def forecast(state: dict, ticker: str, s: dict, spy: dict[int, float], vix: dict
     else:
         signal = "No reliable edge"
     stock_metrics = state["metrics"]["per_stock"].get(ticker, {})
+    dp = 5 if price < 20 else 2
     return {
         "horizon": HORIZON,
         "p_up": round(p_up, 3),
@@ -368,9 +387,9 @@ def forecast(state: dict, ticker: str, s: dict, spy: dict[int, float], vix: dict
         "signal": signal,
         "edge": bool(state["edge"] and signal != "No reliable edge"),
         "lean": round(lean, 3),
-        "low": round(price * exp(q_lo * pv), 2),
-        "mid": round(price * exp(q_mid * pv), 2),
-        "high": round(price * exp(q_hi * pv), 2),
+        "low": round(price * exp(q_lo * pv), dp),
+        "mid": round(price * exp(q_mid * pv), dp),
+        "high": round(price * exp(q_hi * pv), dp),
         "low_pct": round((exp(q_lo * pv) - 1) * 100, 2),
         "high_pct": round((exp(q_hi * pv) - 1) * 100, 2),
         "vol_5d_pct": round(pv * 100, 2),

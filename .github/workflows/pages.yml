@@ -1,12 +1,13 @@
 # Builds MarktRadar as a static site and publishes it on GitHub Pages.
-# Runs every 15 minutes while the US market is open, hourly otherwise.
+# Runs every 10 minutes while the US market is open, hourly otherwise (crypto trades 24/7).
 # Model and saved forecasts are kept as JSON on the `data` branch.
 name: Update MarktRadar
 
 on:
   schedule:
-    - cron: "*/15 13-21 * * 1-5"
-    - cron: "7 * * * *"
+    - cron: "*/10 13-21 * * 1-5"
+    - cron: "7 0-12,22-23 * * 1-5"
+    - cron: "7 * * * 0,6"
   workflow_dispatch:
   push:
     branches: [main]

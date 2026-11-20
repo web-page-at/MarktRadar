@@ -1,6 +1,6 @@
 // Network-first: always show the newest app version when the server is reachable,
 // fall back to the cached shell when offline.
-const CACHE='marktradar-shell-v5';const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg'];
+const CACHE='marktradar-shell-v6';const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

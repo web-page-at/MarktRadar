@@ -1,10 +1,14 @@
 # MarktRadar
 
-Responsive stock overview for ten large US companies: **NVDA, MSFT, AAPL, AMZN, GOOGL, META, TSLA, AVGO, BRK-B and JPM**. The Python server loads Yahoo Finance prices and RSS headlines in the background, trains a forecast model once per trading day and keeps a live track record of its own forecasts. Only the Python standard library is used.
+Clear market overview in simple German for **43 instruments**: 20 US stocks, 9 European/Austrian stocks (SAP, Siemens, Allianz, Mercedes-Benz, ASML, LVMH, OMV, Erste Group, voestalpine), 5 indices (S&P 500, Nasdaq 100, DAX, ATX, Euro Stoxx 50), 6 commodities (gold, silver, Brent and WTI oil, natural gas, copper), Bitcoin, Ethereum and EUR/USD. Data comes from Yahoo Finance; a forecast model is retrained every trading day and keeps a live track record of its own forecasts. Only the Python standard library is used.
+
+**Simple mode:** market strip, chart with a day-by-day forecast (likely 50 % and possible 80 % range), plain-language outlook, live “Kurs-Check” (trend, last month, today's move vs. normal, RSI, position in the 12-month range), winners/losers, news, sortable list by category.
+
+**Expert mode:** 50/200-day averages and Bollinger bands in the chart, performance 1W–5Y, volatility, max drawdown, beta/correlation to the S&P 500, RSI, MACD, model details (base rate, raw model probability, backtest coverage), forecast table per day and CSV export for Excel.
 
 ## Online (phone and PC)
 
-**https://web-page-at.github.io/MarktRadar/** – runs on GitHub, no PC needed. A GitHub Actions job (`.github/workflows/pages.yml`) loads the data every 15 minutes while the US market is open (hourly otherwise), retrains the model once per trading day and publishes the result to GitHub Pages. The trained model and the saved forecasts are kept as JSON on the `data` branch. On the iPhone: open the link in Safari → Share → **Add to Home Screen**.
+**https://web-page-at.github.io/MarktRadar/** – runs on GitHub, no PC needed. A GitHub Actions job (`.github/workflows/pages.yml`) loads the data about every 10 minutes while the US market is open (hourly otherwise; GitHub cannot schedule faster than every 5 minutes), retrains the model once per trading day and publishes the result to GitHub Pages. The trained model and the saved forecasts are kept as JSON on the `data` branch. On the iPhone: open the link in Safari → Share → **Add to Home Screen**.
 
 Note: GitHub pauses scheduled jobs in public repositories after 60 days without activity; re-enable it under *Actions* if that happens.
 
