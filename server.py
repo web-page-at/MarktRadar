@@ -536,5 +536,63 @@ def main() -> None:
         print("\nStopped.")
 
 
+STATIC_FILES = ["index.html", "sw.js", "manifest.webmanifest", "icon.svg"]
+STATIC_REFRESH_SECONDS = 900  # GitHub Actions schedule during market hours
+
+
+def build_static(out_dir: Path, state_dir: Path) -> None:
+    """One refresh without a web server, written as a static site (GitHub Pages).
+
+    State (trained model + saved forecasts) lives as small JSON files in `state_dir`
+    so the track record survives between runs.
+    """
+    global DB, _snapshot, _model_state
+    import shutil
+    state_dir.mkdir(parents=True, exist_ok=True)
+    DB = state_dir / "_build.sqlite3"
+    DB.unlink(missing_ok=True)
+    init_db()
+    model_file, forecast_file = state_dir / "model.json", state_dir / "forecasts.json"
+    if model_file.exists():
+        stored = json.loads(model_file.read_text(encoding="utf-8"))
+        if stored.get("version") == model.MODEL_VERSION:
+            kv_set("model", stored)
+            _model_state = stored
+    if forecast_file.exists():
+        rows = json.loads(forecast_file.read_text(encoding="utf-8"))
+        with db() as con:
+            for r in rows:
+                con.execute(f"INSERT OR REPLACE INTO forecasts({','.join(r)}) VALUES({','.join('?' * len(r))})", list(r.values()))
+    refresh()
+    if not _snapshot:
+        raise RuntimeError("No data could be loaded.")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "api").mkdir(exist_ok=True)
+    for name in STATIC_FILES:
+        shutil.copy2(ROOT / name, out_dir / name)
+    snap = {**_snapshot, "static": True, "refresh_seconds": STATIC_REFRESH_SECONDS,
+            "status": {"phase": "ready", "message": "Up to date", "error": None, "refreshing": False, "last_attempt": now_iso()}}
+    (out_dir / "api" / "overview").write_text(json.dumps(snap, ensure_ascii=False), encoding="utf-8")
+    st = _model_state or {}
+    (out_dir / "api" / "model").write_text(json.dumps({k: st[k] for k in ("version", "trained_at", "trained_on", "metrics", "alpha", "edge", "train_seconds") if k in st}), encoding="utf-8")
+    (out_dir / ".nojekyll").write_text("")
+    if _model_state:
+        model_file.write_text(json.dumps(_model_state), encoding="utf-8")
+    with db() as con:
+        rows = [dict(r) for r in con.execute("SELECT * FROM forecasts ORDER BY asof, ticker")]
+    forecast_file.write_text(json.dumps(rows, indent=0), encoding="utf-8")
+    try:
+        DB.unlink(missing_ok=True)
+    except OSError:
+        pass
+    print(f"Static site written to {out_dir} · {len(snap['stocks'])} stocks · {len(rows)} saved forecasts")
+
+
 if __name__ == "__main__":
-    main()
+    if "--build" in sys.argv:
+        args = sys.argv[1:]
+        out = Path(args[args.index("--build") + 1]).resolve()
+        state = Path(args[args.index("--state") + 1]).resolve() if "--state" in args else out.parent / "state"
+        build_static(out, state)
+    else:
+        main()

@@ -2,6 +2,12 @@
 
 Responsive stock overview for ten large US companies: **NVDA, MSFT, AAPL, AMZN, GOOGL, META, TSLA, AVGO, BRK-B and JPM**. The Python server loads Yahoo Finance prices and RSS headlines in the background, trains a forecast model once per trading day and keeps a live track record of its own forecasts. Only the Python standard library is used.
 
+## Online (phone and PC)
+
+**https://web-page-at.github.io/MarktRadar/** – runs on GitHub, no PC needed. A GitHub Actions job (`.github/workflows/pages.yml`) loads the data every 15 minutes while the US market is open (hourly otherwise), retrains the model once per trading day and publishes the result to GitHub Pages. The trained model and the saved forecasts are kept as JSON on the `data` branch. On the iPhone: open the link in Safari → Share → **Add to Home Screen**.
+
+Note: GitHub pauses scheduled jobs in public repositories after 60 days without activity; re-enable it under *Actions* if that happens.
+
 ## Start on Windows
 
 1. Install Python 3.12 or later.

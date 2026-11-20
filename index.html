@@ -217,9 +217,9 @@
   $('stockSearch').addEventListener('input',e=>{search=e.target.value.trim().toLowerCase();renderRows()});
   const toast=$('toast');function showToast(msg){toast.textContent=msg;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),2800)}
   function setBadge(kind,text){const b=$('dataBadge');b.className='demo-label'+(kind?' '+kind:'');b.innerHTML='<span></span>'+esc(text)}
-  function renderStatus(){if(!data)return;const st=data.status||{},age=data.age_seconds||0;$('chartUpdated').textContent=`Stand ${new Date(data.updated_at).toLocaleTimeString(L,{hour:'2-digit',minute:'2-digit'})} Uhr`;
-    if(st.refreshing)setBadge('live','Wird aktualisiert…');else if(data.stale||st.error)setBadge('warn',st.error?'Aktualisierung fehlgeschlagen · zeige gespeicherte Daten':`Daten sind ${Math.round(age/60)} Min. alt`);else setBadge('live','Live · Kurse evtl. leicht verzögert');
-    const mk=data.market||{};const pill=$('marketPill');pill.classList.toggle('closed',!mk.open);pill.innerHTML=`<i class="dot"></i>Börse New York ${mk.open?'offen':'geschlossen'}`;
+  function renderStatus(){if(!data)return;const st=data.status||{},age=Math.max(0,(Date.now()-new Date(data.updated_at))/1000),mk=data.market||{},stale=mk.open&&age>(data.refresh_seconds||300)*3;$('chartUpdated').textContent=`Stand ${new Date(data.updated_at).toLocaleTimeString(L,{hour:'2-digit',minute:'2-digit'})} Uhr`;
+    if(st.refreshing)setBadge('live','Wird aktualisiert…');else if(stale||st.error)setBadge('warn',st.error?'Aktualisierung fehlgeschlagen · zeige gespeicherte Daten':`Daten sind ${Math.round(age/60)} Min. alt`);else setBadge('live',data.static?(mk.open?'Live · alle 15 Min. aktualisiert':'Börse zu · Kurse vom letzten Handelstag'):'Live · Kurse evtl. leicht verzögert');
+    const pill=$('marketPill');pill.classList.toggle('closed',!mk.open);pill.innerHTML=`<i class="dot"></i>Börse New York ${mk.open?'offen':'geschlossen'}`;
     $('dateLine').textContent=new Date().toLocaleDateString(L,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     const ups=stocks.filter(s=>!s.demo&&s.change>0).length,live=stocks.filter(s=>!s.demo).length;if(live)$('subline').textContent=`Heute: ${ups} von ${live} Aktien im Plus${mk.open?'.':' (letzter Handelstag).'}${data.missing?.length?` Fehlt gerade: ${data.missing.join(', ')}.`:''}`}
 
@@ -235,7 +235,7 @@
   let pollTimer=null,lastUpdated=null;
   function schedule(ms){clearTimeout(pollTimer);pollTimer=setTimeout(loadMarket,ms)}
   async function loadMarket(force=false){
-    try{const r=await fetch(`/api/overview${force?'?force=1':''}`,{cache:'no-store'});const d=await r.json().catch(()=>({}));
+    try{const r=await fetch(`api/overview?t=${Date.now()}${force?'&force=1':''}`,{cache:'no-store'});const d=await r.json().catch(()=>({}));
       if(d.mode==='loading'){const step=(d.status?.message||'').match(/(\d+)\/(\d+)/);setBadge('','Erster Start: Daten werden geladen…');$('subline').textContent=step?`Prognose wird berechnet: Schritt ${step[1]} von ${step[2]}…`:'Lade 10 Jahre Kursdaten und berechne die Prognose (ca. 30–60 Sekunden).';schedule(3000);return}
       if(d.mode!=='live')throw Error('unavailable');
       data=d;stocks=d.stocks.map(s=>({...s}));if(!stocks.find(s=>s.ticker===selected))selected=stocks[0].ticker;
@@ -245,10 +245,10 @@
       schedule(force||d.status?.refreshing||!d.model?.ready?4000:60000);
     }catch(e){if(stocks[0]?.demo){setBadge('warn','Beispieldaten · Server starten für echte Kurse');selectStock(selected)}else setBadge('warn','Server nicht erreichbar · zeige letzte Daten');schedule(30000)}
     finally{$('refreshBtn').classList.remove('spin')}}
-  $('refreshBtn').onclick=()=>{$('refreshBtn').classList.add('spin');showToast('Daten werden aktualisiert…');loadMarket(true)};
+  $('refreshBtn').onclick=()=>{$('refreshBtn').classList.add('spin');showToast(data?.static?'Neueste Daten geladen · Aktualisierung automatisch alle 15 Min.':'Daten werden aktualisiert…');loadMarket(!data?.static)};
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadMarket()});
   selectStock(selected);loadMarket();
-  if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=4',{updateViaCache:'none'}).catch(()=>{});
+  if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=5',{updateViaCache:'none'}).catch(()=>{});
   </script>
 </body>
 </html>

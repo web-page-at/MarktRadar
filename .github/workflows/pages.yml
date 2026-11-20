@@ -1,0 +1,67 @@
+# Builds MarktRadar as a static site and publishes it on GitHub Pages.
+# Runs every 15 minutes while the US market is open, hourly otherwise.
+# Model and saved forecasts are kept as JSON on the `data` branch.
+name: Update MarktRadar
+
+on:
+  schedule:
+    - cron: "*/15 13-21 * * 1-5"
+    - cron: "7 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: marktradar
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore saved state
+        run: |
+          mkdir -p state
+          if git fetch --depth=1 origin data; then
+            git archive FETCH_HEAD | tar -x -C state
+          else
+            echo "No saved state yet - starting fresh."
+          fi
+
+      - name: Load data, forecast, build site
+        run: python server.py --build site --state state
+
+      - name: Save state
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd state
+          rm -f _build.sqlite3
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "State $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
