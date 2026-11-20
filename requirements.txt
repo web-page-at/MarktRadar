@@ -1,0 +1,1 @@
+# MarktRadar uses only the Python standard library. No pip packages required.
